@@ -15,9 +15,9 @@ public class Order {
     private Timestamp updatedAt;
     private String userEmail;
     private Integer usageCount;
-    private LicenceKey licenceKey;
+    private Licence licence;
 
-    public Order(boolean pause, String status, Timestamp endAt, boolean cancelled, Timestamp renewsAt, Timestamp lastReset, String userName, Timestamp createdAt, Timestamp updatedAt, String userEmail, Integer usageCount, LicenceKey licenceKey) {
+    public Order(boolean pause, String status, Timestamp endAt, boolean cancelled, Timestamp renewsAt, Timestamp lastReset, String userName, Timestamp createdAt, Timestamp updatedAt, String userEmail, Integer usageCount, Licence licence) {
         this.pause = pause;
         this.status = status;
         this.endAt = endAt;
@@ -29,7 +29,7 @@ public class Order {
         this.updatedAt = updatedAt;
         this.userEmail = userEmail;
         this.usageCount = usageCount;
-        this.licenceKey = licenceKey;
+        this.licence = licence;
     }
 
     public boolean isPause() {
@@ -120,11 +120,11 @@ public class Order {
         this.usageCount = usageCount;
     }
 
-    public LicenceKey getLicenceKey() {
-        return licenceKey;
+    public Licence getLicenceKey() {
+        return licence;
     }
 
-    public void setLicenceKey(LicenceKey licenceKey) {
-        this.licenceKey = licenceKey;
+    public void setLicenceKey(Licence licence) {
+        this.licence = licence;
     }
 }
