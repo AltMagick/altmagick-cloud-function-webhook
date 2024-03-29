@@ -1,10 +1,10 @@
 package com.generaltor.cloudfunction.webhook.entities;
 
-public class LicenceKey {
+public class Licence {
     private String licenceKey;
     private boolean isDisabled;
 
-    public LicenceKey(String licenceKey, boolean isDisabled) {
+    public Licence(String licenceKey, boolean isDisabled) {
         this.licenceKey = licenceKey;
         this.isDisabled = isDisabled;
     }
