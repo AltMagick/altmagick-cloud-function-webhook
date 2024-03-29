@@ -1,6 +1,6 @@
 package com.generaltor.cloudfunction.webhook.googlecloudfunctions;
 
-import com.generaltor.cloudfunction.webhook.entities.LicenceKey;
+import com.generaltor.cloudfunction.webhook.entities.Licence;
 import com.generaltor.cloudfunction.webhook.entities.Order;
 import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutures;
@@ -27,6 +27,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -96,86 +97,80 @@ public class ProcessWebHook implements HttpFunction {
         }
     }
 
+    private Order extractOrderAttributesAndCreateOrder(JsonObject attributes) {
+        boolean pause = attributes.has("pause") && !attributes.get("pause").isJsonNull() && attributes.get("pause").getAsBoolean();
+        String status = attributes.has("status") && !attributes.get("status").isJsonNull() ? attributes.get("status").getAsString() : "";
+        String endAt = attributes.has("end_at") && !attributes.get("end_at").isJsonNull() ? attributes.get("end_at").getAsString() : "";
+        boolean cancelled = attributes.has("cancelled") && !attributes.get("cancelled").isJsonNull() && attributes.get("cancelled").getAsBoolean();
+        String renewsAt = attributes.has("renews_at") && !attributes.get("renews_at").isJsonNull() ? attributes.get("renews_at").getAsString() : "";
+        String userName = attributes.has("user_name") && !attributes.get("user_name").isJsonNull() ? attributes.get("user_name").getAsString() : "";
+        String createdAt = attributes.has("created_at") && !attributes.get("created_at").isJsonNull() ? attributes.get("created_at").getAsString() : "";
+        String updatedAt = attributes.has("updated_at") && !attributes.get("updated_at").isJsonNull() ? attributes.get("updated_at").getAsString() : "";
+        String userEmail = attributes.has("user_email") && !attributes.get("user_email").isJsonNull() ? attributes.get("user_email").getAsString() : "";
+
+        Instant createdAtInstant = !Objects.equals(createdAt, "") ? Instant.parse(createdAt) : null;
+        Instant renewsAtInstant = !Objects.equals(renewsAt, "") ? Instant.parse(renewsAt) : null;
+        Instant updatedAtInstant = !Objects.equals(updatedAt, "") ? Instant.parse(updatedAt) : null;
+        Instant endAtInstant = !Objects.equals(endAt, "") ? Instant.parse(endAt) : null;
+
+        Timestamp createdAtTimestamp = createdAtInstant != null ? Timestamp.ofTimeSecondsAndNanos(createdAtInstant.getEpochSecond(), createdAtInstant.getNano()) : null;
+        Timestamp renewsAtTimestamp = renewsAtInstant != null ? Timestamp.ofTimeSecondsAndNanos(renewsAtInstant.getEpochSecond(), renewsAtInstant.getNano()) : null;
+        Timestamp updatedAtTimestamp = updatedAtInstant != null ? Timestamp.ofTimeSecondsAndNanos(updatedAtInstant.getEpochSecond(), updatedAtInstant.getNano()) : null;
+        Timestamp endAtTimestamp = endAtInstant != null ? Timestamp.ofTimeSecondsAndNanos(endAtInstant.getEpochSecond(), endAtInstant.getNano()) : null;
+
+
+        return new Order(pause, status, endAtTimestamp, cancelled, renewsAtTimestamp, null, userName, createdAtTimestamp, updatedAtTimestamp, userEmail, 0, new Licence(null, false));
+    }
+
     private void handleSubscriptionCreated(JsonObject eventData) {
         try {
             JsonObject dataObject = eventData.getAsJsonObject("data");
-
             if (dataObject != null && dataObject.has("attributes")) {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
-
-                boolean pause = attributes.get("pause").getAsBoolean();
-                String status = attributes.get("status").getAsString();
-                String endAt = attributes.get("end_at").getAsString();
-                String orderId = attributes.get("order_id").getAsString();
-                boolean cancelled = attributes.get("cancelled").getAsBoolean();
-                String renewsAt = attributes.get("renews_at").getAsString();
-                String userName = attributes.get("user_name").getAsString();
-                String createdAt = attributes.get("created_at").getAsString();
-                String updatedAt = attributes.get("updated_at").getAsString();
-                String userEmail = attributes.get("user_email").getAsString();
-
-                Instant createdAtInstant = Instant.parse(createdAt);
-                Instant renewsAtInstant = Instant.parse(renewsAt);
-                Instant updatedAtInstant = Instant.parse(updatedAt);
-                Instant endAtInstant = Instant.parse(endAt);
-
-                Timestamp createdAtTimestamp = Timestamp.ofTimeSecondsAndNanos(createdAtInstant.getEpochSecond(), createdAtInstant.getNano());
-                Timestamp renewsAtTimestamp = Timestamp.ofTimeSecondsAndNanos(renewsAtInstant.getEpochSecond(), renewsAtInstant.getNano());
-                Timestamp updatedAtTimestamp = Timestamp.ofTimeSecondsAndNanos(updatedAtInstant.getEpochSecond(), updatedAtInstant.getNano());
-                Timestamp endAtTimestamp = Timestamp.ofTimeSecondsAndNanos(endAtInstant.getEpochSecond(), endAtInstant.getNano());
-
-                LicenceKey licenceKey = new LicenceKey(null, false);
-
-                Order order = new Order(pause, status, endAtTimestamp, cancelled, renewsAtTimestamp, null, userName, createdAtTimestamp, updatedAtTimestamp, userEmail, 0, licenceKey);
+                Order order = extractOrderAttributesAndCreateOrder(attributes);
+                String orderId = attributes.has("order_id") && !attributes.get("order_id").isJsonNull() ? attributes.get("order_id").getAsString() : "";
                 CollectionReference orders = firestore.collection("orders");
                 List<ApiFuture<WriteResult>> futures = new ArrayList<>();
                 futures.add(orders.document(orderId).set(order));
                 ApiFutures.allAsList(futures).get();
-
                 LOG.info("Order created: " + orderId);
             } else {
-                System.out.println("Missing data in the webhook payload for the event subscription_expired.");
+                LOG.error("Missing data in the webhook payload for the event subscription_created.");
             }
         } catch (Exception e) {
             LOG.error("Error while processing subscription_created event", e);
-
         }
     }
 
     private void handleSubscriptionUpdated(JsonObject eventData) {
         try {
             JsonObject dataObject = eventData.getAsJsonObject("data");
-
             if (dataObject != null && dataObject.has("attributes")) {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
-
-                String orderId = attributes.get("order_id").getAsString();
-                String status = attributes.get("status").getAsString();
-                String renewsAt = attributes.get("renews_at").getAsString();
-
-                Instant renewsAtInstant = Instant.parse(renewsAt);
-                Timestamp renewsAtTimestamp = Timestamp.ofTimeSecondsAndNanos(renewsAtInstant.getEpochSecond(), renewsAtInstant.getNano());
-
+                String orderId = attributes.has("order_id") && !attributes.get("order_id").isJsonNull() ? attributes.get("order_id").getAsString() : "";
+                Order order = extractOrderAttributesAndCreateOrder(attributes);
                 DocumentReference orderRef = firestore.collection("orders").document(orderId);
                 ApiFuture<DocumentSnapshot> future = orderRef.get();
 
                 try {
                     DocumentSnapshot document = future.get();
                     if (document.exists()) {
-                        if (status.equals("active")) {
-                            orderRef.update("isExpired", false);
-                        } else {
-                            orderRef.update("isExpired", true);
-                        }
-                        orderRef.update("nextResetDate", renewsAtTimestamp);
-                        LOG.info("Subscription updated for order: " + orderId + " with status: " + status);
+                        orderRef.update("pause", order.isPause());
+                        orderRef.update("status", order.getStatus());
+                        orderRef.update("endAt", order.getEndAt());
+                        orderRef.update("cancelled", order.isCancelled());
+                        orderRef.update("renewsAt", order.getRenewsAt());
+                        orderRef.update("userName", order.getUserName());
+                        orderRef.update("createdAt", order.getCreatedAt());
+                        orderRef.update("updatedAt", order.getUpdatedAt());
+                        orderRef.update("userEmail", order.getUserEmail());
+                        LOG.info("Subscription updated for order: " + orderId);
                     } else {
                         LOG.error("No such document: " + orderId);
                     }
                 } catch (InterruptedException | ExecutionException e) {
                     LOG.error("Error updating document: " + e.getMessage());
                 }
-
             } else {
                 LOG.error("Missing data in the webhook payload for the event subscription_updated.");
             }
@@ -184,7 +179,7 @@ public class ProcessWebHook implements HttpFunction {
         }
     }
 
-    private void updateLicenseKeyInOrder(String orderId, String licenseKey, String logMessage) {
+    private void updateLicenseKeyInOrder(String orderId, Licence licenseKey, String logMessage) {
         DocumentReference orderRef = firestore.collection("orders").document(orderId);
         ApiFuture<DocumentSnapshot> future = orderRef.get();
         try {
@@ -207,7 +202,9 @@ public class ProcessWebHook implements HttpFunction {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
                 String orderId = attributes.get("order_id").getAsString();
                 String licenseKey = attributes.get("key").getAsString();
-                updateLicenseKeyInOrder(orderId, licenseKey, "License key added to order: ");
+                String disabled = attributes.get("disabled").getAsString();
+                Licence licence= new Licence(licenseKey, Boolean.parseBoolean(disabled));
+                updateLicenseKeyInOrder(orderId, licence, "License key added to order: ");
             } else {
                 LOG.error("Missing data in the webhook payload for the event license_key_created.");
             }
@@ -223,7 +220,9 @@ public class ProcessWebHook implements HttpFunction {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
                 String orderId = attributes.get("order_id").getAsString();
                 String licenseKey = attributes.get("key").getAsString();
-                updateLicenseKeyInOrder(orderId, licenseKey, "License key updated for order: ");
+                String disabled = attributes.get("disabled").getAsString();
+                Licence licence = new Licence(licenseKey, Boolean.parseBoolean(disabled));
+                updateLicenseKeyInOrder(orderId, licence, "License key updated for order: ");
             } else {
                 LOG.error("Missing data in the webhook payload for the event license_key_updated.");
             }
