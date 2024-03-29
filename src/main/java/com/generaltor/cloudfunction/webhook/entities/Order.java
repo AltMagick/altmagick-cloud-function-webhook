@@ -1,34 +1,115 @@
 package com.generaltor.cloudfunction.webhook.entities;
 
-public class Order {
-    private String orderDate;
-    private String lastResetDate;
-    private Integer usageCount;
-    private String licenceKey;
-    private boolean isExpired;
+import com.google.cloud.Timestamp;
 
-    public Order(String orderDate, String lastResetDate, Integer usageCount, String licenceKey, boolean isExpired) {
-        this.orderDate = orderDate;
-        this.lastResetDate = lastResetDate;
+public class Order {
+
+    private boolean pause;
+    private String status;
+    private Timestamp endAt;
+    private boolean cancelled;
+    private Timestamp renewsAt;
+    private Timestamp lastReset;
+    private String userName;
+    private Timestamp createdAt;
+    private Timestamp updatedAt;
+    private String userEmail;
+    private Integer usageCount;
+    private LicenceKey licenceKey;
+
+    public Order(boolean pause, String status, Timestamp endAt, boolean cancelled, Timestamp renewsAt, Timestamp lastReset, String userName, Timestamp createdAt, Timestamp updatedAt, String userEmail, Integer usageCount, LicenceKey licenceKey) {
+        this.pause = pause;
+        this.status = status;
+        this.endAt = endAt;
+        this.cancelled = cancelled;
+        this.renewsAt = renewsAt;
+        this.lastReset = lastReset;
+        this.userName = userName;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.userEmail = userEmail;
         this.usageCount = usageCount;
         this.licenceKey = licenceKey;
-        this.isExpired = isExpired;
     }
 
-    public String getOrderDate() {
-        return orderDate;
+    public boolean isPause() {
+        return pause;
     }
 
-    public void setOrderDate(String orderDate) {
-        this.orderDate = orderDate;
+    public void setPause(boolean pause) {
+        this.pause = pause;
     }
 
-    public String getLastResetDate() {
-        return lastResetDate;
+    public String getStatus() {
+        return status;
     }
 
-    public void setLastResetDate(String lastResetDate) {
-        this.lastResetDate = lastResetDate;
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public Timestamp getEndAt() {
+        return endAt;
+    }
+
+    public void setEndAt(Timestamp endAt) {
+        this.endAt = endAt;
+    }
+
+    public boolean isCancelled() {
+        return cancelled;
+    }
+
+    public void setCancelled(boolean cancelled) {
+        this.cancelled = cancelled;
+    }
+
+    public Timestamp getRenewsAt() {
+        return renewsAt;
+    }
+
+    public void setRenewsAt(Timestamp renewsAt) {
+        this.renewsAt = renewsAt;
+    }
+
+    public Timestamp getLastReset() {
+        return lastReset;
+    }
+
+    public void setLastReset(Timestamp lastReset) {
+        this.lastReset = lastReset;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public Timestamp getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Timestamp createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Timestamp getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Timestamp updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public String getUserEmail() {
+        return userEmail;
+    }
+
+    public void setUserEmail(String userEmail) {
+        this.userEmail = userEmail;
     }
 
     public Integer getUsageCount() {
@@ -39,19 +120,11 @@ public class Order {
         this.usageCount = usageCount;
     }
 
-    public String getLicenceKey() {
+    public LicenceKey getLicenceKey() {
         return licenceKey;
     }
 
-    public void setLicenceKey(String licenceKey) {
+    public void setLicenceKey(LicenceKey licenceKey) {
         this.licenceKey = licenceKey;
-    }
-
-    public boolean isExpired() {
-        return isExpired;
-    }
-
-    public void setExpired(boolean expired) {
-        isExpired = expired;
     }
 }
