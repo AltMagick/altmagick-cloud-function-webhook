@@ -1,8 +1,10 @@
 package com.generaltor.cloudfunction.webhook.googlecloudfunctions;
 
+import com.generaltor.cloudfunction.webhook.entities.LicenceKey;
 import com.generaltor.cloudfunction.webhook.entities.Order;
 import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutures;
+import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.*;
 import com.google.cloud.functions.HttpFunction;
 import com.google.cloud.functions.HttpRequest;
@@ -22,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -100,14 +103,30 @@ public class ProcessWebHook implements HttpFunction {
             if (dataObject != null && dataObject.has("attributes")) {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
 
+                boolean pause = attributes.get("pause").getAsBoolean();
+                String status = attributes.get("status").getAsString();
+                String endAt = attributes.get("end_at").getAsString();
                 String orderId = attributes.get("order_id").getAsString();
-                Order order = new Order(
-                        attributes.get("created_at").getAsString(),
-                        attributes.get("created_at").getAsString(),
-                        0,
-                        null,
-                        false
-                );
+                boolean cancelled = attributes.get("cancelled").getAsBoolean();
+                String renewsAt = attributes.get("renews_at").getAsString();
+                String userName = attributes.get("user_name").getAsString();
+                String createdAt = attributes.get("created_at").getAsString();
+                String updatedAt = attributes.get("updated_at").getAsString();
+                String userEmail = attributes.get("user_email").getAsString();
+
+                Instant createdAtInstant = Instant.parse(createdAt);
+                Instant renewsAtInstant = Instant.parse(renewsAt);
+                Instant updatedAtInstant = Instant.parse(updatedAt);
+                Instant endAtInstant = Instant.parse(endAt);
+
+                Timestamp createdAtTimestamp = Timestamp.ofTimeSecondsAndNanos(createdAtInstant.getEpochSecond(), createdAtInstant.getNano());
+                Timestamp renewsAtTimestamp = Timestamp.ofTimeSecondsAndNanos(renewsAtInstant.getEpochSecond(), renewsAtInstant.getNano());
+                Timestamp updatedAtTimestamp = Timestamp.ofTimeSecondsAndNanos(updatedAtInstant.getEpochSecond(), updatedAtInstant.getNano());
+                Timestamp endAtTimestamp = Timestamp.ofTimeSecondsAndNanos(endAtInstant.getEpochSecond(), endAtInstant.getNano());
+
+                LicenceKey licenceKey = new LicenceKey(null, false);
+
+                Order order = new Order(pause, status, endAtTimestamp, cancelled, renewsAtTimestamp, null, userName, createdAtTimestamp, updatedAtTimestamp, userEmail, 0, licenceKey);
                 CollectionReference orders = firestore.collection("orders");
                 List<ApiFuture<WriteResult>> futures = new ArrayList<>();
                 futures.add(orders.document(orderId).set(order));
@@ -132,6 +151,10 @@ public class ProcessWebHook implements HttpFunction {
 
                 String orderId = attributes.get("order_id").getAsString();
                 String status = attributes.get("status").getAsString();
+                String renewsAt = attributes.get("renews_at").getAsString();
+
+                Instant renewsAtInstant = Instant.parse(renewsAt);
+                Timestamp renewsAtTimestamp = Timestamp.ofTimeSecondsAndNanos(renewsAtInstant.getEpochSecond(), renewsAtInstant.getNano());
 
                 DocumentReference orderRef = firestore.collection("orders").document(orderId);
                 ApiFuture<DocumentSnapshot> future = orderRef.get();
@@ -144,6 +167,7 @@ public class ProcessWebHook implements HttpFunction {
                         } else {
                             orderRef.update("isExpired", true);
                         }
+                        orderRef.update("nextResetDate", renewsAtTimestamp);
                         LOG.info("Subscription updated for order: " + orderId + " with status: " + status);
                     } else {
                         LOG.error("No such document: " + orderId);
