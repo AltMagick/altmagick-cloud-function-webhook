@@ -11,10 +11,10 @@ on:
   pull_request:
 
 jobs:
-  permissions:
-    contents: 'read'
-    id-token: 'write'
-  build:
+  deploy:
+    permissions:
+      contents: 'read'
+      id-token: 'write'
 
     runs-on: ubuntu-latest
 
