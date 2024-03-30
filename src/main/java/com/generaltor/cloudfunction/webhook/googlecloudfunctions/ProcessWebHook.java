@@ -1,7 +1,7 @@
 package com.generaltor.cloudfunction.webhook.googlecloudfunctions;
 
-import com.generaltor.cloudfunction.webhook.entities.Licence;
-import com.generaltor.cloudfunction.webhook.entities.Order;
+import com.generaltor.cloudfunction.webhook.entities.License;
+import com.generaltor.cloudfunction.webhook.entities.Sub;
 import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutures;
 import com.google.cloud.Timestamp;
@@ -97,7 +97,7 @@ public class ProcessWebHook implements HttpFunction {
         }
     }
 
-    private Order extractOrderAttributesAndCreateOrder(JsonObject attributes) {
+    private Sub extractOrderAttributesAndCreateOrder(JsonObject attributes) {
         boolean pause = attributes.has("pause") && !attributes.get("pause").isJsonNull() && attributes.get("pause").getAsBoolean();
         String status = attributes.has("status") && !attributes.get("status").isJsonNull() ? attributes.get("status").getAsString() : "";
         String endAt = attributes.has("end_at") && !attributes.get("end_at").isJsonNull() ? attributes.get("end_at").getAsString() : "";
@@ -119,7 +119,7 @@ public class ProcessWebHook implements HttpFunction {
         Timestamp endAtTimestamp = endAtInstant != null ? Timestamp.ofTimeSecondsAndNanos(endAtInstant.getEpochSecond(), endAtInstant.getNano()) : null;
 
 
-        return new Order(pause, status, endAtTimestamp, cancelled, renewsAtTimestamp, null, userName, createdAtTimestamp, updatedAtTimestamp, userEmail, 0, new Licence(null, false));
+        return new Sub(pause, status, endAtTimestamp, cancelled, renewsAtTimestamp, null, userName, createdAtTimestamp, updatedAtTimestamp, userEmail, 0, new License(null, false));
     }
 
     private void handleSubscriptionCreated(JsonObject eventData) {
@@ -127,11 +127,12 @@ public class ProcessWebHook implements HttpFunction {
             JsonObject dataObject = eventData.getAsJsonObject("data");
             if (dataObject != null && dataObject.has("attributes")) {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
-                Order order = extractOrderAttributesAndCreateOrder(attributes);
+                Sub sub = extractOrderAttributesAndCreateOrder(attributes);
                 String orderId = attributes.has("order_id") && !attributes.get("order_id").isJsonNull() ? attributes.get("order_id").getAsString() : "";
-                CollectionReference orders = firestore.collection("orders");
+                sub.setLastReset(sub.getCreatedAt());
+                CollectionReference subs = firestore.collection("subs");
                 List<ApiFuture<WriteResult>> futures = new ArrayList<>();
-                futures.add(orders.document(orderId).set(order));
+                futures.add(subs.document(orderId).set(sub));
                 ApiFutures.allAsList(futures).get();
                 LOG.info("Order created: " + orderId);
             } else {
@@ -148,22 +149,22 @@ public class ProcessWebHook implements HttpFunction {
             if (dataObject != null && dataObject.has("attributes")) {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
                 String orderId = attributes.has("order_id") && !attributes.get("order_id").isJsonNull() ? attributes.get("order_id").getAsString() : "";
-                Order order = extractOrderAttributesAndCreateOrder(attributes);
-                DocumentReference orderRef = firestore.collection("orders").document(orderId);
+                Sub sub = extractOrderAttributesAndCreateOrder(attributes);
+                DocumentReference orderRef = firestore.collection("subs").document(orderId);
                 ApiFuture<DocumentSnapshot> future = orderRef.get();
 
                 try {
                     DocumentSnapshot document = future.get();
                     if (document.exists()) {
-                        orderRef.update("pause", order.isPause());
-                        orderRef.update("status", order.getStatus());
-                        orderRef.update("endAt", order.getEndAt());
-                        orderRef.update("cancelled", order.isCancelled());
-                        orderRef.update("renewsAt", order.getRenewsAt());
-                        orderRef.update("userName", order.getUserName());
-                        orderRef.update("createdAt", order.getCreatedAt());
-                        orderRef.update("updatedAt", order.getUpdatedAt());
-                        orderRef.update("userEmail", order.getUserEmail());
+                        orderRef.update("pause", sub.isPause());
+                        orderRef.update("status", sub.getStatus());
+                        orderRef.update("endAt", sub.getEndAt());
+                        orderRef.update("cancelled", sub.isCancelled());
+                        orderRef.update("renewsAt", sub.getRenewsAt());
+                        orderRef.update("userName", sub.getUserName());
+                        orderRef.update("createdAt", sub.getCreatedAt());
+                        orderRef.update("updatedAt", sub.getUpdatedAt());
+                        orderRef.update("userEmail", sub.getUserEmail());
                         LOG.info("Subscription updated for order: " + orderId);
                     } else {
                         LOG.error("No such document: " + orderId);
@@ -179,13 +180,13 @@ public class ProcessWebHook implements HttpFunction {
         }
     }
 
-    private void updateLicenseKeyInOrder(String orderId, Licence licenseKey, String logMessage) {
-        DocumentReference orderRef = firestore.collection("orders").document(orderId);
+    private void updateLicenseKeyInOrder(String orderId, License license, String logMessage) {
+        DocumentReference orderRef = firestore.collection("subs").document(orderId);
         ApiFuture<DocumentSnapshot> future = orderRef.get();
         try {
             DocumentSnapshot document = future.get();
             if (document.exists()) {
-                orderRef.update("licenceKey", licenseKey);
+                orderRef.update("license", license);
                 LOG.info(logMessage + orderId);
             } else {
                 LOG.error("Document not found: " + orderId);
@@ -203,8 +204,8 @@ public class ProcessWebHook implements HttpFunction {
                 String orderId = attributes.get("order_id").getAsString();
                 String licenseKey = attributes.get("key").getAsString();
                 String disabled = attributes.get("disabled").getAsString();
-                Licence licence= new Licence(licenseKey, Boolean.parseBoolean(disabled));
-                updateLicenseKeyInOrder(orderId, licence, "License key added to order: ");
+                License license = new License(licenseKey, Boolean.parseBoolean(disabled));
+                updateLicenseKeyInOrder(orderId, license, "License key added to order: ");
             } else {
                 LOG.error("Missing data in the webhook payload for the event license_key_created.");
             }
@@ -221,8 +222,8 @@ public class ProcessWebHook implements HttpFunction {
                 String orderId = attributes.get("order_id").getAsString();
                 String licenseKey = attributes.get("key").getAsString();
                 String disabled = attributes.get("disabled").getAsString();
-                Licence licence = new Licence(licenseKey, Boolean.parseBoolean(disabled));
-                updateLicenseKeyInOrder(orderId, licence, "License key updated for order: ");
+                License license = new License(licenseKey, Boolean.parseBoolean(disabled));
+                updateLicenseKeyInOrder(orderId, license, "License key updated for order: ");
             } else {
                 LOG.error("Missing data in the webhook payload for the event license_key_updated.");
             }
