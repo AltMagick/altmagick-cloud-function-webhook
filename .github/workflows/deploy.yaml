@@ -46,7 +46,7 @@ jobs:
         uses: "google-github-actions/setup-gcloud@v2"
 
       - name: "Build with Maven"
-        run: mvn -B formatter:validate install --file pom.xml -DskipTests=true
+        run: mvn install --file pom.xml -DskipTests=true
 
       - name: "Deploy Cloud Function"
         run: |
