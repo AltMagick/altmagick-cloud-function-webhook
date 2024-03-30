@@ -34,6 +34,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
+      - name: "Build with Maven"
+        run: mvn install --file pom.xml
+
       - id: "auth"
         uses: "google-github-actions/auth@v2"
         with:
@@ -42,9 +45,6 @@ jobs:
 
       - name: "Set up Cloud SDK"
         uses: "google-github-actions/setup-gcloud@v2"
-
-      - name: "Build with Maven"
-        run: mvn install --file pom.xml -DskipTests=true
 
       - name: "Deploy Cloud Function"
         run: |
