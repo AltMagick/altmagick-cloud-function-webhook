@@ -2,7 +2,7 @@ package com.generaltor.cloudfunction.webhook.entities;
 
 import com.google.cloud.Timestamp;
 
-public class Order {
+public class Sub {
 
     private boolean pause;
     private String status;
@@ -15,9 +15,9 @@ public class Order {
     private Timestamp updatedAt;
     private String userEmail;
     private Integer usageCount;
-    private Licence licence;
+    private License license;
 
-    public Order(boolean pause, String status, Timestamp endAt, boolean cancelled, Timestamp renewsAt, Timestamp lastReset, String userName, Timestamp createdAt, Timestamp updatedAt, String userEmail, Integer usageCount, Licence licence) {
+    public Sub(boolean pause, String status, Timestamp endAt, boolean cancelled, Timestamp renewsAt, Timestamp lastReset, String userName, Timestamp createdAt, Timestamp updatedAt, String userEmail, Integer usageCount, License license) {
         this.pause = pause;
         this.status = status;
         this.endAt = endAt;
@@ -29,7 +29,7 @@ public class Order {
         this.updatedAt = updatedAt;
         this.userEmail = userEmail;
         this.usageCount = usageCount;
-        this.licence = licence;
+        this.license = license;
     }
 
     public boolean isPause() {
@@ -120,11 +120,11 @@ public class Order {
         this.usageCount = usageCount;
     }
 
-    public Licence getLicenceKey() {
-        return licence;
+    public License getLicense() {
+        return license;
     }
 
-    public void setLicenceKey(Licence licence) {
-        this.licence = licence;
+    public void setLicense(License license) {
+        this.license = license;
     }
 }
