@@ -13,8 +13,8 @@ on:
 jobs:
   deploy:
     permissions:
-      contents: 'read'
-      id-token: 'write'
+      contents: "read"
+      id-token: "write"
 
     runs-on: ubuntu-latest
 
@@ -26,10 +26,12 @@ jobs:
         with:
           java-version: 21
 
-      - name: "Cache local Maven repository"
+      - name: "Cache Maven packages"
         uses: actions/cache@v2
         with:
-          path: ~/.m2/repository
+          path: |
+            ~/.m2/repository
+            ~/.m2/wrapper
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
@@ -44,9 +46,9 @@ jobs:
         uses: "google-github-actions/setup-gcloud@v2"
 
       - name: "Build with Maven"
-        run: ./mvnw install -DskipTests=true
+        run: mvn -B formatter:validate install --file pom.xml -DskipTests=true
 
-      - name: "Deploy to Cloud Function"
+      - name: "Deploy Cloud Function"
         run: |
           gcloud functions deploy ${{ secrets.cloud_function_name }} \
             --entry-point io.quarkus.gcp.functions.QuarkusHttpFunction \
