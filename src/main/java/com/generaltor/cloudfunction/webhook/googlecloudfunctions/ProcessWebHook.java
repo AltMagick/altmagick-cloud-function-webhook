@@ -119,7 +119,7 @@ public class ProcessWebHook implements HttpFunction {
         Timestamp endAtTimestamp = endAtInstant != null ? Timestamp.ofTimeSecondsAndNanos(endAtInstant.getEpochSecond(), endAtInstant.getNano()) : null;
 
 
-        return new Sub(pause, status, endAtTimestamp, cancelled, renewsAtTimestamp, null, userName, createdAtTimestamp, updatedAtTimestamp, userEmail, 0, new License(null, false));
+        return new Sub(pause, status, endAtTimestamp, cancelled, renewsAtTimestamp, null, null, userName, createdAtTimestamp, updatedAtTimestamp, userEmail, 0, new License(null, false));
     }
 
     private void handleSubscriptionCreated(JsonObject eventData) {
@@ -129,6 +129,7 @@ public class ProcessWebHook implements HttpFunction {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
                 Sub sub = extractOrderAttributesAndCreateOrder(attributes);
                 String orderId = attributes.has("order_id") && !attributes.get("order_id").isJsonNull() ? attributes.get("order_id").getAsString() : "";
+                sub.setNextReset(sub.getRenewsAt());
                 sub.setLastReset(sub.getCreatedAt());
                 CollectionReference subs = firestore.collection("subs");
                 List<ApiFuture<WriteResult>> futures = new ArrayList<>();
