@@ -97,7 +97,7 @@ public class ProcessWebHook implements HttpFunction {
         }
     }
 
-    private Sub extractOrderAttributesAndCreateOrder(JsonObject attributes) {
+    private Sub extractSubContentFromJson(JsonObject attributes) {
         boolean pause = attributes.has("pause") && !attributes.get("pause").isJsonNull() && attributes.get("pause").getAsBoolean();
         String status = attributes.has("status") && !attributes.get("status").isJsonNull() ? attributes.get("status").getAsString() : "";
         String endAt = attributes.has("end_at") && !attributes.get("end_at").isJsonNull() ? attributes.get("end_at").getAsString() : "";
@@ -118,7 +118,6 @@ public class ProcessWebHook implements HttpFunction {
         Timestamp updatedAtTimestamp = updatedAtInstant != null ? Timestamp.ofTimeSecondsAndNanos(updatedAtInstant.getEpochSecond(), updatedAtInstant.getNano()) : null;
         Timestamp endAtTimestamp = endAtInstant != null ? Timestamp.ofTimeSecondsAndNanos(endAtInstant.getEpochSecond(), endAtInstant.getNano()) : null;
 
-
         return new Sub(pause, status, endAtTimestamp, cancelled, renewsAtTimestamp, null, null, userName, createdAtTimestamp, updatedAtTimestamp, userEmail, 0, new License(null, false));
     }
 
@@ -127,7 +126,7 @@ public class ProcessWebHook implements HttpFunction {
             JsonObject dataObject = eventData.getAsJsonObject("data");
             if (dataObject != null && dataObject.has("attributes")) {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
-                Sub sub = extractOrderAttributesAndCreateOrder(attributes);
+                Sub sub = extractSubContentFromJson(attributes);
                 String subId = attributes.has("order_id") && !attributes.get("order_id").isJsonNull() ? attributes.get("order_id").getAsString() : "";
                 sub.setNextReset(sub.getRenewsAt());
                 sub.setLastReset(sub.getCreatedAt());
@@ -135,7 +134,7 @@ public class ProcessWebHook implements HttpFunction {
                 List<ApiFuture<WriteResult>> futures = new ArrayList<>();
                 futures.add(subs.document(subId).set(sub));
                 ApiFutures.allAsList(futures).get();
-                LOG.info("Order created: " + subId);
+                LOG.info("Sub created: " + subId);
             } else {
                 LOG.error("Missing data in the webhook payload for the event subscription_created.");
             }
@@ -150,7 +149,7 @@ public class ProcessWebHook implements HttpFunction {
             if (dataObject != null && dataObject.has("attributes")) {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
                 String subId = attributes.has("order_id") && !attributes.get("order_id").isJsonNull() ? attributes.get("order_id").getAsString() : "";
-                Sub sub = extractOrderAttributesAndCreateOrder(attributes);
+                Sub sub = extractSubContentFromJson(attributes);
                 DocumentReference orderRef = firestore.collection("subs").document(subId);
                 ApiFuture<DocumentSnapshot> future = orderRef.get();
 
@@ -180,6 +179,7 @@ public class ProcessWebHook implements HttpFunction {
             LOG.error("Error while processing subscription_updated event", e);
         }
     }
+
 
     private void updateLicenseKeyInSub(String subId, License license, String logMessage) {
         DocumentReference orderRef = firestore.collection("subs").document(subId);
