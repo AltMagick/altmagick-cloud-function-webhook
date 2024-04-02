@@ -128,14 +128,14 @@ public class ProcessWebHook implements HttpFunction {
             if (dataObject != null && dataObject.has("attributes")) {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
                 Sub sub = extractOrderAttributesAndCreateOrder(attributes);
-                String orderId = attributes.has("order_id") && !attributes.get("order_id").isJsonNull() ? attributes.get("order_id").getAsString() : "";
+                String subId = attributes.has("order_id") && !attributes.get("order_id").isJsonNull() ? attributes.get("order_id").getAsString() : "";
                 sub.setNextReset(sub.getRenewsAt());
                 sub.setLastReset(sub.getCreatedAt());
                 CollectionReference subs = firestore.collection("subs");
                 List<ApiFuture<WriteResult>> futures = new ArrayList<>();
-                futures.add(subs.document(orderId).set(sub));
+                futures.add(subs.document(subId).set(sub));
                 ApiFutures.allAsList(futures).get();
-                LOG.info("Order created: " + orderId);
+                LOG.info("Order created: " + subId);
             } else {
                 LOG.error("Missing data in the webhook payload for the event subscription_created.");
             }
@@ -149,9 +149,9 @@ public class ProcessWebHook implements HttpFunction {
             JsonObject dataObject = eventData.getAsJsonObject("data");
             if (dataObject != null && dataObject.has("attributes")) {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
-                String orderId = attributes.has("order_id") && !attributes.get("order_id").isJsonNull() ? attributes.get("order_id").getAsString() : "";
+                String subId = attributes.has("order_id") && !attributes.get("order_id").isJsonNull() ? attributes.get("order_id").getAsString() : "";
                 Sub sub = extractOrderAttributesAndCreateOrder(attributes);
-                DocumentReference orderRef = firestore.collection("subs").document(orderId);
+                DocumentReference orderRef = firestore.collection("subs").document(subId);
                 ApiFuture<DocumentSnapshot> future = orderRef.get();
 
                 try {
@@ -166,9 +166,9 @@ public class ProcessWebHook implements HttpFunction {
                         orderRef.update("createdAt", sub.getCreatedAt());
                         orderRef.update("updatedAt", sub.getUpdatedAt());
                         orderRef.update("userEmail", sub.getUserEmail());
-                        LOG.info("Subscription updated for order: " + orderId);
+                        LOG.info("Subscription updated for order: " + subId);
                     } else {
-                        LOG.error("No such document: " + orderId);
+                        LOG.error("No such document: " + subId);
                     }
                 } catch (InterruptedException | ExecutionException e) {
                     LOG.error("Error updating document: " + e.getMessage());
@@ -181,16 +181,16 @@ public class ProcessWebHook implements HttpFunction {
         }
     }
 
-    private void updateLicenseKeyInOrder(String orderId, License license, String logMessage) {
-        DocumentReference orderRef = firestore.collection("subs").document(orderId);
+    private void updateLicenseKeyInSub(String subId, License license, String logMessage) {
+        DocumentReference orderRef = firestore.collection("subs").document(subId);
         ApiFuture<DocumentSnapshot> future = orderRef.get();
         try {
             DocumentSnapshot document = future.get();
             if (document.exists()) {
                 orderRef.update("license", license);
-                LOG.info(logMessage + orderId);
+                LOG.info(logMessage + subId);
             } else {
-                LOG.error("Document not found: " + orderId);
+                LOG.error("Document not found: " + subId);
             }
         } catch (InterruptedException | ExecutionException e) {
             LOG.error("Error updating document: " + e.getMessage());
@@ -202,11 +202,11 @@ public class ProcessWebHook implements HttpFunction {
             JsonObject dataObject = eventData.getAsJsonObject("data");
             if (dataObject != null && dataObject.has("attributes")) {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
-                String orderId = attributes.get("order_id").getAsString();
+                String subId = attributes.get("order_id").getAsString();
                 String licenseKey = attributes.get("key").getAsString();
                 String disabled = attributes.get("disabled").getAsString();
                 License license = new License(licenseKey, Boolean.parseBoolean(disabled));
-                updateLicenseKeyInOrder(orderId, license, "License key added to order: ");
+                updateLicenseKeyInSub(subId, license, "License key added to order: ");
             } else {
                 LOG.error("Missing data in the webhook payload for the event license_key_created.");
             }
@@ -220,11 +220,11 @@ public class ProcessWebHook implements HttpFunction {
             JsonObject dataObject = eventData.getAsJsonObject("data");
             if (dataObject != null && dataObject.has("attributes")) {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
-                String orderId = attributes.get("order_id").getAsString();
+                String subId = attributes.get("order_id").getAsString();
                 String licenseKey = attributes.get("key").getAsString();
                 String disabled = attributes.get("disabled").getAsString();
                 License license = new License(licenseKey, Boolean.parseBoolean(disabled));
-                updateLicenseKeyInOrder(orderId, license, "License key updated for order: ");
+                updateLicenseKeyInSub(subId, license, "License key updated for order: ");
             } else {
                 LOG.error("Missing data in the webhook payload for the event license_key_updated.");
             }
