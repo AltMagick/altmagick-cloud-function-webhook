@@ -39,7 +39,7 @@ public class ProcessWebHook implements HttpFunction {
     private static final String HMAC_SHA256 = "HmacSHA256";
     @Inject
     Firestore firestore;
-    @ConfigProperty(name = "quarkus.secrets.lemonsqueezy.signingsecret")
+    @ConfigProperty(name = "custom.secrets.lemonsqueezy.signingsecret")
     String signingSecret;
 
     @Override
