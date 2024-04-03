@@ -1,7 +1,7 @@
 package com.generaltor.cloudfunction.webhook.googlecloudfunctions;
 
-import com.generaltor.cloudfunction.webhook.entities.License;
-import com.generaltor.cloudfunction.webhook.entities.Sub;
+import com.generaltor.cloudfunction.webhook.entity.License;
+import com.generaltor.cloudfunction.webhook.entity.Sub;
 import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutures;
 import com.google.cloud.Timestamp;
