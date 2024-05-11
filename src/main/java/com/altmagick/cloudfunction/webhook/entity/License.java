@@ -1,4 +1,4 @@
-package com.generaltor.cloudfunction.webhook.entity;
+package com.altmagick.cloudfunction.webhook.entity;
 
 public class License {
     private String licenseKey;

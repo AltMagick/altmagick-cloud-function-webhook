@@ -1,4 +1,4 @@
-package com.generaltor.cloudfunction.webhook.entity;
+package com.altmagick.cloudfunction.webhook.entity;
 
 import com.google.cloud.Timestamp;
 
