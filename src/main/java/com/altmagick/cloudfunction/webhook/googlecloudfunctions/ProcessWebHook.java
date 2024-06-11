@@ -118,7 +118,7 @@ public class ProcessWebHook implements HttpFunction {
         Timestamp updatedAtTimestamp = updatedAtInstant != null ? Timestamp.ofTimeSecondsAndNanos(updatedAtInstant.getEpochSecond(), updatedAtInstant.getNano()) : null;
         Timestamp endAtTimestamp = endAtInstant != null ? Timestamp.ofTimeSecondsAndNanos(endAtInstant.getEpochSecond(), endAtInstant.getNano()) : null;
 
-        return new Sub(pause, status, endAtTimestamp, cancelled, renewsAtTimestamp, null, null, userName, createdAtTimestamp, updatedAtTimestamp, userEmail, 0, new License(null, false));
+        return new Sub(pause, status, endAtTimestamp, cancelled, renewsAtTimestamp, userName, createdAtTimestamp, updatedAtTimestamp, userEmail, 0, new License(null, false));
     }
 
     private void handleSubscriptionCreated(JsonObject eventData) {
@@ -128,8 +128,6 @@ public class ProcessWebHook implements HttpFunction {
                 JsonObject attributes = dataObject.getAsJsonObject("attributes");
                 Sub sub = extractSubContentFromJson(attributes);
                 String subId = attributes.has("order_id") && !attributes.get("order_id").isJsonNull() ? attributes.get("order_id").getAsString() : "";
-                sub.setNextReset(sub.getRenewsAt());
-                sub.setLastReset(sub.getCreatedAt());
                 CollectionReference subs = firestore.collection("subs");
                 List<ApiFuture<WriteResult>> futures = new ArrayList<>();
                 futures.add(subs.document(subId).set(sub));
@@ -153,6 +151,7 @@ public class ProcessWebHook implements HttpFunction {
                 DocumentReference orderRef = firestore.collection("subs").document(subId);
                 ApiFuture<DocumentSnapshot> future = orderRef.get();
 
+
                 try {
                     DocumentSnapshot document = future.get();
                     if (document.exists()) {
@@ -160,6 +159,10 @@ public class ProcessWebHook implements HttpFunction {
                         orderRef.update("status", sub.getStatus());
                         orderRef.update("endAt", sub.getEndAt());
                         orderRef.update("cancelled", sub.isCancelled());
+                        Sub existingSub = document.toObject(Sub.class);
+                        if (existingSub != null && !existingSub.getRenewsAt().equals(sub.getRenewsAt())) {
+                            orderRef.update("usageCount", 0);
+                        }
                         orderRef.update("renewsAt", sub.getRenewsAt());
                         orderRef.update("userName", sub.getUserName());
                         orderRef.update("createdAt", sub.getCreatedAt());
@@ -197,7 +200,7 @@ public class ProcessWebHook implements HttpFunction {
         }
     }
 
-    private void handleLicenseKeyCreated(JsonObject eventData) {
+    private void handleLicenseKey(JsonObject eventData, String logMessage) {
         try {
             JsonObject dataObject = eventData.getAsJsonObject("data");
             if (dataObject != null && dataObject.has("attributes")) {
@@ -206,31 +209,21 @@ public class ProcessWebHook implements HttpFunction {
                 String licenseKey = attributes.get("key").getAsString();
                 String disabled = attributes.get("disabled").getAsString();
                 License license = new License(licenseKey, Boolean.parseBoolean(disabled));
-                updateLicenseKeyInSub(subId, license, "License key added to order: ");
+                updateLicenseKeyInSub(subId, license, logMessage);
             } else {
-                LOG.error("Missing data in the webhook payload for the event license_key_created.");
+                LOG.error("Missing data in the webhook payload for the event " + logMessage);
             }
         } catch (Exception e) {
-            LOG.error("Error while processing license_key_created event", e);
+            LOG.error("Error while processing " + logMessage + " event", e);
         }
     }
 
+    private void handleLicenseKeyCreated(JsonObject eventData) {
+        handleLicenseKey(eventData, "license_key_created");
+    }
+
     private void handleLicenseKeyUpdated(JsonObject eventData) {
-        try {
-            JsonObject dataObject = eventData.getAsJsonObject("data");
-            if (dataObject != null && dataObject.has("attributes")) {
-                JsonObject attributes = dataObject.getAsJsonObject("attributes");
-                String subId = attributes.get("order_id").getAsString();
-                String licenseKey = attributes.get("key").getAsString();
-                String disabled = attributes.get("disabled").getAsString();
-                License license = new License(licenseKey, Boolean.parseBoolean(disabled));
-                updateLicenseKeyInSub(subId, license, "License key updated for order: ");
-            } else {
-                LOG.error("Missing data in the webhook payload for the event license_key_updated.");
-            }
-        } catch (Exception e) {
-            LOG.error("Error while processing license_key_updated event", e);
-        }
+        handleLicenseKey(eventData, "license_key_updated");
     }
 
     private String readRequestBody(HttpRequest request) throws IOException {
